@@ -1,0 +1,147 @@
+# render.yaml — SOCIONET Blueprint
+# Docs: https://render.com/docs/blueprint-spec
+# Deploy: connect repo on Render → "New Blueprint Instance"
+
+services:
+  # ── API Backend
+  - type: web
+    name: socionet-api
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: apps/api
+    buildCommand: npm install && npm run build
+    startCommand: node -r tsconfig-paths/register dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: socionet-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: socionet-redis
+          type: redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: USE_CLOUDINARY
+        value: "true"
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: BCRYPT_ROUNDS
+        value: "12"
+      - key: APP_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: DATABASE_SSL
+        value: "true"
+
+  # ── Realtime / Socket.io
+  - type: web
+    name: socionet-realtime
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: apps/realtime
+    buildCommand: npm install && npm run build
+    startCommand: node dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: REDIS_URL
+        fromService:
+          name: socionet-redis
+          type: redis
+          property: connectionString
+      - key: JWT_SECRET
+        fromService:
+          name: socionet-api
+          type: web
+          envVarKey: JWT_SECRET
+      - key: APP_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+
+  # ── Next.js Frontend
+  - type: web
+    name: socionet-web
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: apps/web
+    buildCommand: npm install && npm run build
+    startCommand: node .next/standalone/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+      - key: NEXT_PUBLIC_REALTIME_URL
+        sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+        sync: false
+
+  # ── Background Worker
+  - type: worker
+    name: socionet-worker
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: apps/api
+    buildCommand: npm install && npm run build
+    startCommand: node -r tsconfig-paths/register dist/worker.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: socionet-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: socionet-redis
+          type: redis
+          property: connectionString
+      - key: JWT_SECRET
+        fromService:
+          name: socionet-api
+          type: web
+          envVarKey: JWT_SECRET
+
+  # ── Redis (Key Value)
+  - type: redis
+    name: socionet-redis
+    region: oregon
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
+
+databases:
+  # ── PostgreSQL
+  - name: socionet-db
+    databaseName: socionet
+    user: socionet
+    region: oregon
+    plan: free
