@@ -135,14 +135,15 @@ async function bootstrap() {
   app.use(errorHandler);
 
   // ── Start
-  httpServer.listen(config.server.port, () => {
-    logger.info(`🚀 SOCIONET API running`, {
-      port: config.server.port,
-      env: config.app.env,
-      url: `http://localhost:${config.server.port}`,
-    });
-  });
+ const PORT = process.env.PORT || config.server.port;
 
+httpServer.listen(PORT, () => {
+  logger.info(`🚀 SOCIONET API running`, {
+    port: PORT,
+    env: config.app.env,
+    url: `http://localhost:${PORT}`,
+  });
+});
   // ── Graceful shutdown
   const shutdown = async (signal: string) => {
     logger.info(`${signal} received — shutting down gracefully`);
