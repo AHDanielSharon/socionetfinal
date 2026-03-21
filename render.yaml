@@ -21,7 +21,7 @@ services:
       - key: NODE_ENV
         value: production
 
-  # Frontend (Next.js)
+  # Frontend
   - type: web
     name: socionet-web
     env: node
@@ -31,8 +31,4 @@ services:
 
 databases:
   - name: socionet-db
-    plan: free
-
-redis:
-  - name: socionet-redis
     plan: free
